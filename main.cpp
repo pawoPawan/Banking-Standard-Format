@@ -12,7 +12,94 @@
 #include <sstream>
 using namespace std;
 
-// GetFileExtension -----------------
+// ----------------Function DECLARATIONS-----------------
+void StandardizeStatement(const string &inputFile, string &outputFile);
+
+// Function for checking if input file extension is valid or not. and if valid generate name of output file
+bool IsValidFileFormat(const string &inputFile);
+void GetFileExtension(const string &inputFile, string &extension);
+void GetOutPutFileName(const string &inputFile, string &outputFile);
+
+// Functions for reading data of input file and storing it in memory
+void Read_File(const string & inputFile, vector<vector<string>> &strListLines, vector<int> &nArrEffWords);
+// Function for converting the data in desired format with mapping and conditions
+void ConvertToDesiredFormat(vector<vector<string>> &strListLines, vector<vector<string>> &strConvertedLines,vector<int> & nEffWordsInLine);
+
+void Get_Column_Header(vector<string> &strColHeader);
+void GetCreditAndDebitFromAmountModel(const string & strAmount, string &strCredit, string &strDebit);
+void GetWordFromStringFromWordNo(string & strToAnalyze, int wordnofromlast, string &retstr);
+void Remove_CarriageAndNewLineCharacter(string &strToRemoveChar);
+
+// function for sorting converted data on basis of dates
+void SortOnBasisOfDates(vector<vector<string>> & strToSortOnBasisOfDates);
+bool CompareDate(string &str1, string &str2);
+
+// Function to write the mapped data in desired format
+void Write_File(const string & outputFile, vector<vector<string>> &strConvertedLines);
+
+// function to take care of output format asked by user
+void ConvertToDouble(string &str);
+void ConvertToDateTimeFormat(string &strDateToDateTime);
+
+// ---------- main function
+int main(int argc, const char * argv[]) {
+    // insert code here...
+    string inputFile = "";
+    string outputFile = "";
+    cin >> inputFile;
+    StandardizeStatement(inputFile,outputFile);
+    cout << endl;
+    cout<<outputFile<<endl;
+    return 0;
+}
+
+// --------------- DEFINITIONS------------
+// --------------StandardizeStatement -----------.
+void StandardizeStatement(const string &inputFile, string &outputFile)
+{
+    //Check File Format
+    if(!IsValidFileFormat(inputFile))
+    {
+        cout << "Invalid File extension, Give file path with valid Extension"<<endl;
+        return;
+    }
+    
+    // Create OutPut File Name
+    GetOutPutFileName(inputFile,outputFile);
+    if(outputFile.length() <= 0)
+    {
+        cout<<"Error in Creating File Name"<<endl;
+        return;
+    }
+    
+    // Append and Store data from file
+    vector<vector<string>>  strListLines;
+    vector<int> nEffWordsInLine;
+    Read_File(inputFile,strListLines,nEffWordsInLine);
+    // Convert to desired format
+    vector<vector<string>> strConvertedStrings;
+    ConvertToDesiredFormat(strListLines,strConvertedStrings,nEffWordsInLine);
+    
+    // Sort Converted String on basis of date
+    SortOnBasisOfDates(strConvertedStrings);
+    // Write Files
+    Write_File(outputFile,strConvertedStrings);
+}
+
+
+// ----------IsValidFileFormat ---------------
+bool IsValidFileFormat(const string &inputFile)
+{
+    bool bIsValid = true;
+    // Get File extension
+    string extension = "";
+    GetFileExtension(inputFile,extension);
+    if(extension != "csv")bIsValid = false;
+    return bIsValid;
+}
+
+
+// --------------GetFileExtension -----------------
 void GetFileExtension(const string &inputFile, string &extension)
 {
     // Find last dot in string
@@ -25,18 +112,8 @@ void GetFileExtension(const string &inputFile, string &extension)
         extension += inputFile[j];
 }
 
-// IsValidFileFormat ---------------
-bool IsValidFileFormat(const string &inputFile)
-{
-    bool bIsValid = true;
-    // Get File extension
-    string extension = "";
-    GetFileExtension(inputFile,extension);
-    if(extension != "csv")bIsValid = false;
-    return bIsValid;
-}
 
-// Get OutPut File Name ------------------
+// --------------Get OutPut File Name ------------------
 void GetOutPutFileName(const string &inputFile, string &outputFile)
 {
     outputFile = inputFile;
@@ -52,7 +129,7 @@ void GetOutPutFileName(const string &inputFile, string &outputFile)
     outputFile.replace(i+1,5,"Output");
 }
 
-//Read File
+// --------------------- Read Input File-------------------------
 
 void Read_File(const string & inputFile, vector<vector<string>> &strListLines, vector<int> &nArrEffWords)
 {
@@ -93,150 +170,8 @@ void Read_File(const string & inputFile, vector<vector<string>> &strListLines, v
     read_file.close();
 }
 
-// Columen Header
-void Get_Column_Header(vector<string> &strColHeader)
-{
-    // Col 1 - Date, Col 2 - Transaction Description, Col 3 - Debit
-    // Col 4 - Credit, Col 5- Currency, Col 6 - Card Name, Col 7 - Transaction, Col 8 - Location
-    strColHeader.push_back("Date"); // Index -- 0
-    strColHeader.push_back("Transaction Description");// Index -- 1
-    strColHeader.push_back("Debit");// Index -- 2
-    strColHeader.push_back("Credit");// Index -- 3
-    strColHeader.push_back("Currency");// Index -- 4
-    strColHeader.push_back("Card Name");// Index -- 5
-    strColHeader.push_back("Transaction");// Index -- 6
-    strColHeader.push_back("Location");// Index -- 7.. Total 8
-}
+// -----------------Covert to Desired format----------------
 
-void GetWordFromStringFromWordNo(string & strToAnalyze, int wordnofromlast, string &retstr)
-{
-    vector<string> arr_Words;
-    
-    string curr_str;
-    int len = strToAnalyze.length();
-    for(int i = 0; i < len; i++)
-    {
-        if ((strToAnalyze[i] == ' ') && (curr_str.length() > 0))
-        {
-            arr_Words.push_back(curr_str);
-            curr_str = "";
-        }
-        else if(strToAnalyze[i] != ' ')
-            curr_str += strToAnalyze[i];
-    }
-    if(curr_str.length()>0)arr_Words.push_back(curr_str);
-    
-    int nSzW = arr_Words.size();
-    if ((nSzW-wordnofromlast) < 0)return;
-    retstr = arr_Words[nSzW - wordnofromlast];
-    
-    if(2 == wordnofromlast)
-    {
-        strToAnalyze = "";
-        for(int j = 0; j <= nSzW-2; j++)
-        strToAnalyze += arr_Words[j] + " ";
-    }
-    
-}
-
-// GetCreditAndDebitFromAmountModel
-void GetCreditAndDebitFromAmountModel(const string & strAmount, string &strCredit, string &strDebit)
-{
-    strCredit = "";
-    strDebit = "";
-    int len = strAmount.length();
-    string tempstr;
-    for(int i = 0; i < len; i++)
-    {
-        if ((strAmount[i] == 'c') || (strAmount[i] == 'C'))
-        {
-            strCredit = tempstr;
-            //strCredit = stod(strCredit);
-            strDebit = "0";
-            //strDebit = stod(strDebit);
-            break;
-        }
-        else if (strAmount[i] != '\r')
-            tempstr += strAmount[i];
-    }
-    if(strCredit.empty())
-    {
-        strCredit = "0";
-        //strCredit = stod(strCredit);
-        strDebit = tempstr;
-        //strDebit = stod(strDebit);
-    }
-}
-
-// Remove New Line or Carraiage form string
-void Remove_CarriageAndNewLineCharacter(string &strToRemoveChar)
-{
-    strToRemoveChar.erase(std::remove(strToRemoveChar.begin(), strToRemoveChar.end(), '\n'), strToRemoveChar.end());
-    strToRemoveChar.erase(std::remove(strToRemoveChar.begin(), strToRemoveChar.end(), '\r'), strToRemoveChar.end());
-}
-
-// Convert to date time format
-void ConvertToDateTimeFormat(string &strDateToDateTime)
-{
-//    time_t ttime = time(0);
-//    //cout << ttime<< endl;
-//    tm *local_time = localtime(&ttime);
-    vector<int>ddmmyy;
-    stringstream ss_curr(strDateToDateTime);
-    string str_curr;
-    while(getline(ss_curr,str_curr,'-'))
-        ddmmyy.push_back(stoi(str_curr));
-
-//    local_time->tm_hour = 00;
-//    local_time->tm_min = 00;
-//    local_time->tm_sec = 00;
-    
-    
-    time_t rawtime;
-    struct tm * timeinfo;
-    char buffer [80];
-
-    time (&rawtime);
-    timeinfo = localtime (&rawtime);
-
-    timeinfo->tm_year = ddmmyy[2];
-    timeinfo->tm_mon = ddmmyy[1];
-    timeinfo->tm_mday = ddmmyy[0];
-    timeinfo->tm_hour = 00;
-    timeinfo->tm_min = 00;
-    timeinfo->tm_sec = 00;
-    //time (&rawtime);
-    //timeinfo = localtime (&rawtime);
-
-    strftime (buffer,80,"%x %H:%M:%S",timeinfo);
-    //strftime (buffer,80,"%x %I:%M:%S%p",timeinfo);
-    //strftime (buffer,80,"%a %b %e %H:%M:%S",timeinfo);
-    
-    strDateToDateTime =  buffer;
-    
-    //strDateToDateTime = strDateToDateTime + " " + buffer;
-    //strDateToDateTime += " "+to_string(local_time->tm_hour)+":" + to_string(local_time->tm_hour)+":" + to_string(local_time->tm_sec);
-}
-
-// Convert to Double
-void ConvertToDouble(string &str)
-{
-    int len = str.length();
-    int nefflen = len;
-    for(int i = 0; i < len; i++)
-    {
-        char ch = str[i];
-        if ((ch == '\357') || (ch == '\273') || (ch == '\277') || (ch == 10) || (ch == 13) || (ch == 32))
-            nefflen--;
-    }
-    
-    if (nefflen == 0) str = "0";
-    double tempnumd = stod(str);
-    int tempnumi = stoi(str);
-    if (tempnumd <= tempnumi)
-        str += ".00";
-}
-// Covert to Desired format
 void ConvertToDesiredFormat(vector<vector<string>> &strListLines, vector<vector<string>> &strConvertedLines,vector<int> & nEffWordsInLine)
 {
     // Add colums for converted lines
@@ -387,60 +322,92 @@ void ConvertToDesiredFormat(vector<vector<string>> &strListLines, vector<vector<
     }
 }
 
-// Write File
-void Write_File(const string & outputFile, vector<vector<string>> &strConvertedLines)
+
+
+// ---------------Columen Header------------------
+void Get_Column_Header(vector<string> &strColHeader)
 {
-    // Append lines in file after conversion to desired format
-    fstream output_file;
-    //output_file.open(outputFile, ios::out | ios::app);
-    output_file.open(outputFile, ios::out);
-    int len = strConvertedLines.size();
-    for(int i = 0; i < len; i++)
-    {
-        int csize = strConvertedLines[i].size();
-        for(int j = 0; j < csize; j++)
-        {
-            if(i > 0)
-            {
-                if ((j == 2) || (j == 3))
-                    ConvertToDouble(strConvertedLines[i][j]);
-                if(j == 0)
-                    ConvertToDateTimeFormat(strConvertedLines[i][j]);
-            }
-            
-            output_file << strConvertedLines[i][j];
-            if(j != csize-1)output_file << ",";
-        }
-        output_file << "\n";
-    }
-    output_file.close();//close file
+    // Col 1 - Date, Col 2 - Transaction Description, Col 3 - Debit
+    // Col 4 - Credit, Col 5- Currency, Col 6 - Card Name, Col 7 - Transaction, Col 8 - Location
+    strColHeader.push_back("Date"); // Index -- 0
+    strColHeader.push_back("Transaction Description");// Index -- 1
+    strColHeader.push_back("Debit");// Index -- 2
+    strColHeader.push_back("Credit");// Index -- 3
+    strColHeader.push_back("Currency");// Index -- 4
+    strColHeader.push_back("Card Name");// Index -- 5
+    strColHeader.push_back("Transaction");// Index -- 6
+    strColHeader.push_back("Location");// Index -- 7.. Total 8
 }
 
-bool CompareDate(string &str1, string &str2)
+// -------------- // GetCreditAndDebitFromAmountModel -------------
+void GetCreditAndDebitFromAmountModel(const string & strAmount, string &strCredit, string &strDebit)
 {
-    //bool result = false;;
-    stringstream ss1(str1);
-    stringstream ss2(str2);
-    string ss1_word;
-    string ss2_word;
-    vector<int> date1;
-    vector<int> date2;
-    while(getline(ss1,ss1_word,'-'))
-        date1.push_back(stoi(ss1_word));
-    
-    while(getline(ss2,ss2_word,'-'))
-        date2.push_back(stoi(ss2_word));
-    
-    if (date1[2] < date2[2])
-        return true;
-    if ((date1[2] == date2[2]) && (date1[1] < date2[1]))
-        return true;
-    if ((date1[2] == date2[2]) && (date1[1] == date2[1])  && (date1[0] < date2[0]))
-        return true;
-    
-    return false;
+    strCredit = "";
+    strDebit = "";
+    int len = strAmount.length();
+    string tempstr;
+    for(int i = 0; i < len; i++)
+    {
+        if ((strAmount[i] == 'c') || (strAmount[i] == 'C'))
+        {
+            strCredit = tempstr;
+            //strCredit = stod(strCredit);
+            strDebit = "0";
+            //strDebit = stod(strDebit);
+            break;
+        }
+        else if (strAmount[i] != '\r')
+            tempstr += strAmount[i];
+    }
+    if(strCredit.empty())
+    {
+        strCredit = "0";
+        //strCredit = stod(strCredit);
+        strDebit = tempstr;
+        //strDebit = stod(strDebit);
+    }
 }
-// Sorting On basis of dates
+
+// ----------------- GetWordFromStringFromWordNo -------------
+void GetWordFromStringFromWordNo(string & strToAnalyze, int wordnofromlast, string &retstr)
+{
+    vector<string> arr_Words;
+    
+    string curr_str;
+    int len = strToAnalyze.length();
+    for(int i = 0; i < len; i++)
+    {
+        if ((strToAnalyze[i] == ' ') && (curr_str.length() > 0))
+        {
+            arr_Words.push_back(curr_str);
+            curr_str = "";
+        }
+        else if(strToAnalyze[i] != ' ')
+            curr_str += strToAnalyze[i];
+    }
+    if(curr_str.length()>0)arr_Words.push_back(curr_str);
+    
+    int nSzW = arr_Words.size();
+    if ((nSzW-wordnofromlast) < 0)return;
+    retstr = arr_Words[nSzW - wordnofromlast];
+    
+    if(2 == wordnofromlast)
+    {
+        strToAnalyze = "";
+        for(int j = 0; j <= nSzW-2; j++)
+        strToAnalyze += arr_Words[j] + " ";
+    }
+    
+}
+
+// -----------Remove New Line or Carraiage form string---------
+void Remove_CarriageAndNewLineCharacter(string &strToRemoveChar)
+{
+    strToRemoveChar.erase(std::remove(strToRemoveChar.begin(), strToRemoveChar.end(), '\n'), strToRemoveChar.end());
+    strToRemoveChar.erase(std::remove(strToRemoveChar.begin(), strToRemoveChar.end(), '\r'), strToRemoveChar.end());
+}
+
+// ----------------Sorting On basis of dates-------------------
 void SortOnBasisOfDates(vector<vector<string>> & strToSortOnBasisOfDates)
 {
     // strToSortOnBasisOfDates[i][0]
@@ -478,48 +445,125 @@ void SortOnBasisOfDates(vector<vector<string>> & strToSortOnBasisOfDates)
     }
     strToSortOnBasisOfDates = strtemptosort;
 }
-// StandardizeStatement -----------.
-void StandardizeStatement(const string &inputFile, string &outputFile)
+
+// ----------- Compare Date ---------
+bool CompareDate(string &str1, string &str2)
 {
-    //Check File Format
-    if(!IsValidFileFormat(inputFile))
-    {
-        cout << "Invalid File extension, Give file path with valid Extension"<<endl;
-        return;
-    }
+    //bool result = false;;
+    stringstream ss1(str1);
+    stringstream ss2(str2);
+    string ss1_word;
+    string ss2_word;
+    vector<int> date1;
+    vector<int> date2;
+    while(getline(ss1,ss1_word,'-'))
+        date1.push_back(stoi(ss1_word));
     
-    // Create OutPut File Name
-    GetOutPutFileName(inputFile,outputFile);
-    if(outputFile.length() <= 0)
-    {
-        cout<<"Error in Creating File Name"<<endl;
-        return;
-    }
+    while(getline(ss2,ss2_word,'-'))
+        date2.push_back(stoi(ss2_word));
     
-    // Append and Store data from file
-    vector<vector<string>>  strListLines;
-    vector<int> nEffWordsInLine;
-    Read_File(inputFile,strListLines,nEffWordsInLine);
-    // Convert to desired format
-    vector<vector<string>> strConvertedStrings;
-    ConvertToDesiredFormat(strListLines,strConvertedStrings,nEffWordsInLine);
+    if (date1[2] < date2[2])
+        return true;
+    if ((date1[2] == date2[2]) && (date1[1] < date2[1]))
+        return true;
+    if ((date1[2] == date2[2]) && (date1[1] == date2[1])  && (date1[0] < date2[0]))
+        return true;
     
-    // Sort Converted String on basis of date
-    SortOnBasisOfDates(strConvertedStrings);
-    // Write Files
-    Write_File(outputFile,strConvertedStrings);
+    return false;
 }
 
-int main(int argc, const char * argv[]) {
-    // insert code here...
-    string inputFile = "";
-    string outputFile = "";
-    cin >> inputFile;
-    StandardizeStatement(outputFile,outputFile);
-    cout << endl;
-    cout<<outputFile<<endl;
-    return 0;
+
+// ----------------------Write File----------------
+void Write_File(const string & outputFile, vector<vector<string>> &strConvertedLines)
+{
+    // Append lines in file after conversion to desired format
+    fstream output_file;
+    //output_file.open(outputFile, ios::out | ios::app);
+    output_file.open(outputFile, ios::out);
+    int len = strConvertedLines.size();
+    for(int i = 0; i < len; i++)
+    {
+        int csize = strConvertedLines[i].size();
+        for(int j = 0; j < csize; j++)
+        {
+            if(i > 0)
+            {
+                if ((j == 2) || (j == 3))
+                    ConvertToDouble(strConvertedLines[i][j]);
+                if(j == 0)
+                    ConvertToDateTimeFormat(strConvertedLines[i][j]);
+            }
+            
+            output_file << strConvertedLines[i][j];
+            if(j != csize-1)output_file << ",";
+        }
+        output_file << "\n";
+    }
+    output_file.close();//close file
 }
+
+// ------------Convert to Double----------------
+void ConvertToDouble(string &str)
+{
+    int len = str.length();
+    int nefflen = len;
+    for(int i = 0; i < len; i++)
+    {
+        char ch = str[i];
+        if ((ch == '\357') || (ch == '\273') || (ch == '\277') || (ch == 10) || (ch == 13) || (ch == 32))
+            nefflen--;
+    }
+    
+    if (nefflen == 0) str = "0";
+    double tempnumd = stod(str);
+    int tempnumi = stoi(str);
+    if (tempnumd <= tempnumi)
+        str += ".00";
+}
+
+// ----------------Convert to date time format-------------------
+void ConvertToDateTimeFormat(string &strDateToDateTime)
+{
+//    time_t ttime = time(0);
+//    //cout << ttime<< endl;
+//    tm *local_time = localtime(&ttime);
+    vector<int>ddmmyy;
+    stringstream ss_curr(strDateToDateTime);
+    string str_curr;
+    while(getline(ss_curr,str_curr,'-'))
+        ddmmyy.push_back(stoi(str_curr));
+
+//    local_time->tm_hour = 00;
+//    local_time->tm_min = 00;
+//    local_time->tm_sec = 00;
+    
+    
+    time_t rawtime;
+    struct tm * timeinfo;
+    char buffer [80];
+
+    time (&rawtime);
+    timeinfo = localtime (&rawtime);
+
+    timeinfo->tm_year = ddmmyy[2];
+    timeinfo->tm_mon = ddmmyy[1];
+    timeinfo->tm_mday = ddmmyy[0];
+    timeinfo->tm_hour = 00;
+    timeinfo->tm_min = 00;
+    timeinfo->tm_sec = 00;
+    //time (&rawtime);
+    //timeinfo = localtime (&rawtime);
+
+    strftime (buffer,80,"%x %H:%M:%S",timeinfo);
+    //strftime (buffer,80,"%x %I:%M:%S%p",timeinfo);
+    //strftime (buffer,80,"%a %b %e %H:%M:%S",timeinfo);
+    
+    strDateToDateTime =  buffer;
+    
+    //strDateToDateTime = strDateToDateTime + " " + buffer;
+    //strDateToDateTime += " "+to_string(local_time->tm_hour)+":" + to_string(local_time->tm_hour)+":" + to_string(local_time->tm_sec);
+}
+
 
 
 // TODO: Convert Date to DateTime Format ?
